@@ -416,7 +416,7 @@ function render() {
     const isToday = sameDay(date, today);
     const holiday = holidays[key];
     const note    = notes[key] || '';
-    const numCls  = dow===0 ? 'sun' : dow===6 ? 'sat' : '';
+    const numCls  = (dow===0 || holiday) ? 'sun' : dow===6 ? 'sat' : '';
     const isWorkday = note.includes('출근');
 
     html += `<div class="day-cell${other?' other-month':''}${isToday?' today':''}${isWorkday?' workday':''}" onclick="openModal('${key}')">
@@ -452,18 +452,22 @@ function openModal(key) {
   setTimeout(() => document.getElementById('modal-note').focus(), 150);
 }
 
-function saveNote() {
+async function saveNote() {
   const val = document.getElementById('modal-note').value.trim();
   if (val) notes[selectedKey] = val;
   else     delete notes[selectedKey];
   save(); render(); closeModal();
+  showToast('💾 저장 중...');
+  await syncToSheet(selectedKey, val);
   showToast('✅ 저장되었습니다');
 }
 
-function deleteNote() {
+async function deleteNote() {
   if (!confirm('메모를 삭제할까요?')) return;
   delete notes[selectedKey];
   save(); render(); closeModal();
+  showToast('💾 삭제 중...');
+  await syncToSheet(selectedKey, '');
   showToast('🗑 메모를 삭제했습니다');
 }
 
@@ -478,8 +482,38 @@ document.addEventListener('keydown', e => {
 function changeMonth(dir) { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth()+dir, 1); render(); }
 function goToday()        { currentDate = new Date(); render(); }
 
-function save() { try { localStorage.setItem('cal-notes', JSON.stringify(notes)); } catch(e){} }
-function load() { try { const d=localStorage.getItem('cal-notes'); if(d) notes=JSON.parse(d); } catch(e){} }
+const API_URL = 'https://script.google.com/macros/s/AKfycbwj-jr31Y3KpJPDNekUjUOAmV3eiJ5O-umAUfUfXmlHJOjrvviscUVem8j82anpOkqm/exec';
+
+function save() {
+  try { localStorage.setItem('cal-notes', JSON.stringify(notes)); } catch(e){}
+}
+
+async function syncToSheet(date, note) {
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, note })
+    });
+  } catch(e) { console.warn('Sheets 동기화 실패:', e); }
+}
+
+async function load() {
+  try { const d=localStorage.getItem('cal-notes'); if(d) notes=JSON.parse(d); } catch(e){}
+  render();
+  try {
+    showToast('🔄 데이터 불러오는 중...');
+    const res = await fetch(API_URL + '?t=' + Date.now());
+    const data = await res.json();
+    notes = data;
+    save();
+    render();
+    showToast('✅ 최신 데이터 불러옴');
+  } catch(e) {
+    showToast('⚠️ 오프라인 - 로컬 데이터 사용 중');
+  }
+}
 
 function exportData() {
   const blob = new Blob([JSON.stringify({notes}, null, 2)], {type:'application/json'});
@@ -517,7 +551,6 @@ function sameDay(a,b) { return a.getFullYear()===b.getFullYear() && a.getMonth()
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 load();
-render();
 </script>
 </body>
 </html>
