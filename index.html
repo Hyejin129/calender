@@ -505,12 +505,27 @@ async function load() {
   try {
     showToast('🔄 데이터 불러오는 중...');
     const res = await fetch(API_URL + '?t=' + Date.now());
-    const data = await res.json();
-    notes = data;
+    const raw = await res.json();
+
+    // Sheets에서 오는 데이터를 확실하게 { "YYYY-MM-DD": "메모" } 형태로 정리
+    const parsed = {};
+    if (typeof raw === 'object' && !Array.isArray(raw)) {
+      Object.entries(raw).forEach(([k, v]) => {
+        const key = String(k).trim();
+        const val = String(v).trim();
+        // YYYY-MM-DD 형식인 키만 취함
+        if (/^\d{4}-\d{2}-\d{2}$/.test(key) && val) {
+          parsed[key] = val;
+        }
+      });
+    }
+
+    notes = parsed;
     save();
     render();
     showToast('✅ 최신 데이터 불러옴');
   } catch(e) {
+    console.warn('Sheets 로드 실패:', e);
     showToast('⚠️ 오프라인 - 로컬 데이터 사용 중');
   }
 }
