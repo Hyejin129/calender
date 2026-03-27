@@ -308,7 +308,7 @@
 <body>
 
 <header>
-  <div class="logo">TEAM <span>CALENDAR</span></div>
+  <div class="logo">DOWNTOP <span>CALENDAR</span></div>
   <div class="header-actions">
     <button class="btn btn-ghost" onclick="exportData()">📤 내보내기</button>
     <button class="btn btn-ghost" onclick="importData()">📥 불러오기</button>
@@ -482,7 +482,7 @@ document.addEventListener('keydown', e => {
 function changeMonth(dir) { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth()+dir, 1); render(); }
 function goToday()        { currentDate = new Date(); render(); }
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbyCIoNo5At24LsCLzypjf63G2TqwfgG6bfSoA68h1BDtYBaV5PoFS_D8RUuUobsfwmy/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyxteVa1xYU_qmnq8mB_HhBBZWDB0BzSxY65OWScGxeM9fMRAz1WmvGMF4GYbo6eRWC/exec';
 
 function save() {
   try { localStorage.setItem('cal-notes', JSON.stringify(notes)); } catch(e){}
