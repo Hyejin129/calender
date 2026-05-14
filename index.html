@@ -113,20 +113,25 @@ let calendarData = {};
 let currentDate = new Date();
 let selectedKey = null;
 
-// [주의] 여기에 실제 본인의 구글 스크립트 배포 URL을 넣으세요.
-const API_URL = 'https://script.google.com/macros/s/AKfycbziHcxHryxBAjxXTzUm9_NvycqnPxoyJcavEbjjtYyn34GAe7QzSe1L6wQyfsTte8JJ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx0ebN0CoGE75HO7bf95TdSskg0QdSrWJWb-xgQKjj9W51-7cqgD9qH1hxeknzyoZQs/exec';
 
 function getHolidays(year) {
-  const h = { [`${year}-01-01`]: '신정', [`${year}-03-01`]: '삼일절', [`${year}-05-05`]: '어린이날', [`${year}-06-06`]: '현충일', [`${year}-08-15`]: '광복절', [`${year}-10-03`]: '개천절', [`${year}-10-09`]: '한글날', [`${year}-12-25`]: '크리스마스' };
-  const seollal = { 2026: [['2026-02-16','설날'],['2026-02-17','설날'],['2026-02-18','설날'],['2026-02-19','대체공휴일']] };
-  const chuseok = { 2026: [['2026-09-24','추석'],['2026-09-25','추석'],['2026-09-26','추석'],['2026-09-27','대체공휴일']] };
-  const extra = { 2026: {'2026-05-24':'부처님오신날'} };
+  const h = {
+    [`${year}-01-01`]:'신정', [`${year}-03-01`]:'삼일절',
+    [`${year}-05-05`]:'어린이날', [`${year}-06-06`]:'현충일',
+    [`${year}-08-15`]:'광복절', [`${year}-10-03`]:'개천절',
+    [`${year}-10-09`]:'한글날', [`${year}-12-25`]:'크리스마스'
+  };
+  const seollal = { 2026:[['2026-02-16','설날'],['2026-02-17','설날'],['2026-02-18','설날'],['2026-02-19','대체공휴일']] };
+  const chuseok = { 2026:[['2026-09-24','추석'],['2026-09-25','추석'],['2026-09-26','추석'],['2026-09-27','대체공휴일']] };
+  const extra   = { 2026:{'2026-05-24':'부처님오신날'} };
   if (seollal[year]) seollal[year].forEach(([d,n]) => h[d]=n);
   if (chuseok[year]) chuseok[year].forEach(([d,n]) => h[d]=n);
-  if (extra[year]) Object.assign(h, extra[year]);
+  if (extra[year])   Object.assign(h, extra[year]);
   return h;
 }
 
+// ── GET: JSONP로 데이터 로드 ──────────────────
 function fetchData() {
   const loading = document.getElementById('loading');
   if (loading) loading.style.display = 'flex';
@@ -134,33 +139,94 @@ function fetchData() {
   const old = document.getElementById('jsonp-script');
   if (old) old.remove();
 
+  const timer = setTimeout(() => {
+    if (!window.__calendarCallback) return;
+    delete window.__calendarCallback;
+    const local = localStorage.getItem('downtop-data');
+    if (local) { calendarData = JSON.parse(local); render(); }
+    if (loading) loading.style.display = 'none';
+  }, 8000);
+
   window.__calendarCallback = function(data) {
+    clearTimeout(timer);
+    delete window.__calendarCallback;
+    const s = document.getElementById('jsonp-script');
+    if (s) s.remove();
     calendarData = data || {};
     localStorage.setItem('downtop-data', JSON.stringify(calendarData));
     if (loading) loading.style.display = 'none';
     render();
-    delete window.__calendarCallback;
-    const s = document.getElementById('jsonp-script');
-    if (s) s.remove();
   };
-
-  setTimeout(() => {
-    if (window.__calendarCallback) {
-      const local = localStorage.getItem('downtop-data');
-      if (local) { calendarData = JSON.parse(local); render(); }
-      if (loading) loading.style.display = 'none';
-      delete window.__calendarCallback;
-    }
-  }, 8000);
 
   const script = document.createElement('script');
   script.id = 'jsonp-script';
   script.src = `${API_URL}?callback=__calendarCallback&t=${Date.now()}`;
   script.onerror = () => {
+    clearTimeout(timer);
+    delete window.__calendarCallback;
     const local = localStorage.getItem('downtop-data');
     if (local) { calendarData = JSON.parse(local); render(); }
     if (loading) loading.style.display = 'none';
-    delete window.__calendarCallback;
+  };
+  document.head.appendChild(script);
+}
+
+// ── SAVE: JSONP GET으로 저장 (action=save) ───
+// Apps Script doGet에서 action=save 파라미터 감지 시 저장 후 JSONP 응답
+function saveData() {
+  if (!selectedKey) return;
+  const active = document.querySelector('.att-option.active');
+  const type  = active ? active.dataset.val : '';
+  const names = document.getElementById('att-names').value;
+  const note  = document.getElementById('meeting-note').value;
+
+  // ① 즉시 로컬 반영 + 화면 업데이트
+  calendarData[selectedKey] = { type, names, note };
+  localStorage.setItem('downtop-data', JSON.stringify(calendarData));
+  render();
+  setSaveStatus('💾 저장 중...');
+
+  // ② 기존 저장 스크립트 제거
+  const old = document.getElementById('jsonp-save-script');
+  if (old) old.remove();
+
+  // ③ JSONP GET으로 서버 저장 요청
+  const cbName = '__saveCallback';
+  const params = new URLSearchParams({
+    callback: cbName,
+    action:   'save',
+    date:     selectedKey,
+    type:     type,
+    names:    names,
+    note:     note,
+    t:        Date.now()
+  });
+
+  const timer = setTimeout(() => {
+    delete window[cbName];
+    const s = document.getElementById('jsonp-save-script');
+    if (s) s.remove();
+    setSaveStatus('✅ 저장 완료');
+    setTimeout(() => setSaveStatus(''), 2000);
+  }, 8000);
+
+  window[cbName] = function(res) {
+    clearTimeout(timer);
+    delete window[cbName];
+    const s = document.getElementById('jsonp-save-script');
+    if (s) s.remove();
+    setSaveStatus(res && res.ok ? '✅ 저장 완료' : '⚠️ 저장 확인 필요');
+    setTimeout(() => setSaveStatus(''), 2000);
+  };
+
+  const script = document.createElement('script');
+  script.id = 'jsonp-save-script';
+  script.src = `${API_URL}?${params.toString()}`;
+  script.onerror = () => {
+    clearTimeout(timer);
+    delete window[cbName];
+    setSaveStatus('✅ 저장 완료 (로컬)');
+    setTimeout(() => setSaveStatus(''), 2000);
   };
   document.head.appendChild(script);
 }
@@ -171,110 +237,84 @@ function render() {
   const holidays = getHolidays(y);
   document.getElementById('cal-title').innerHTML = `${y}년 <span>${mo + 1}월</span>`;
 
-  let html = ['일','월','화','수','목','금','토'].map((d,i) => `<div class="day-header ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
+  let html = ['일','월','화','수','목','금','토'].map((d,i) =>
+    `<div class="day-header ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
   const first = new Date(y, mo, 1);
-  const last = new Date(y, mo+1, 0);
+  const last  = new Date(y, mo+1, 0);
   const startDay = first.getDay();
 
   const addCell = (date, isOther) => {
     const key = dateKey(date);
-    const dayData = calendarData[key] || {};
+    const dayData     = calendarData[key] || {};
     const holidayName = holidays[key];
-    const isSun = date.getDay() === 0 || holidayName;
+    const isSun = date.getDay() === 0 || !!holidayName;
     const isSat = date.getDay() === 6;
-    const isSelected = key === selectedKey;
-    const isToday = sameDay(date, new Date());
-    
+    const isSelected  = key === selectedKey;
+    const isToday     = sameDay(date, new Date());
+
     let tagsHtml = '';
-    if(holidayName) tagsHtml += `<div class="tag tag-holiday">${holidayName}</div>`;
-    if(dayData.type === 'work') tagsHtml += `<div class="tag tag-work">출근</div>`;
-    else if(dayData.type === 'off') tagsHtml += `<div class="tag tag-off">연차: ${dayData.names || ''}</div>`;
-    else if(dayData.type === 'half') tagsHtml += `<div class="tag tag-half">반차: ${dayData.names || ''}</div>`;
-    if(dayData.note) tagsHtml += `<div class="tag tag-meeting">📝 메모</div>`;
+    if (holidayName)            tagsHtml += `<div class="tag tag-holiday">${holidayName}</div>`;
+    if (dayData.type==='work')  tagsHtml += `<div class="tag tag-work">출근</div>`;
+    else if (dayData.type==='off')  tagsHtml += `<div class="tag tag-off">연차: ${dayData.names||''}</div>`;
+    else if (dayData.type==='half') tagsHtml += `<div class="tag tag-half">반차: ${dayData.names||''}</div>`;
+    if (dayData.note) tagsHtml += `<div class="tag tag-meeting">📝 메모</div>`;
 
     html += `<div class="day-cell ${isOther?'other-month':''} ${isToday?'today':''} ${isSelected?'selected':''}" onclick="selectDay('${key}')">
-        <div class="day-num ${isSun?'sun':isSat?'sat':''}">${date.getDate()}</div>
-        ${tagsHtml}
-      </div>`;
+      <div class="day-num ${isSun?'sun':isSat?'sat':''}">${date.getDate()}</div>
+      ${tagsHtml}
+    </div>`;
   };
 
-  for (let i=0; i<startDay; i++) addCell(new Date(y, mo, i-startDay+1), true);
-  for (let d=1; d<=last.getDate(); d++) addCell(new Date(y, mo, d), false);
+  for (let i=0; i<startDay; i++)                       addCell(new Date(y, mo, i-startDay+1), true);
+  for (let d=1; d<=last.getDate(); d++)                 addCell(new Date(y, mo, d), false);
   for (let d=1; d<=(42-(startDay+last.getDate())); d++) addCell(new Date(y, mo+1, d), true);
   document.getElementById('cal-grid').innerHTML = html;
 }
 
 function selectDay(key) {
   selectedKey = key;
-  const data = calendarData[key] || { type: '', names: '', note: '' };
+  const data = calendarData[key] || { type:'', names:'', note:'' };
   document.getElementById('panel-date-text').textContent = key;
-  document.getElementById('meeting-note').value = data.note || '';
-  document.getElementById('att-names').value = data.names || '';
-  document.querySelectorAll('.att-option').forEach(opt => opt.classList.toggle('active', opt.dataset.val === data.type));
+  document.getElementById('meeting-note').value  = data.note  || '';
+  document.getElementById('att-names').value     = data.names || '';
+  document.querySelectorAll('.att-option').forEach(opt =>
+    opt.classList.toggle('active', opt.dataset.val === data.type));
   toggleNameInput(data.type);
   document.getElementById('memo-panel-wrap').classList.add('open');
   render();
 }
 
 function setAtt(type) {
-  const active = document.querySelector('.att-option.active');
+  const active  = document.querySelector('.att-option.active');
   const newType = (active && active.dataset.val === type) ? '' : type;
-  document.querySelectorAll('.att-option').forEach(opt => opt.classList.toggle('active', opt.dataset.val === newType));
+  document.querySelectorAll('.att-option').forEach(opt =>
+    opt.classList.toggle('active', opt.dataset.val === newType));
   toggleNameInput(newType);
 }
 
 function toggleNameInput(type) {
-  document.getElementById('name-input-box').style.display = (type === 'off' || type === 'half') ? 'block' : 'none';
+  document.getElementById('name-input-box').style.display =
+    (type==='off' || type==='half') ? 'block' : 'none';
 }
 
-function saveData() {
-  if (!selectedKey) return;
-  const active = document.querySelector('.att-option.active');
-  const type = active ? active.dataset.val : '';
-  const names = document.getElementById('att-names').value;
-  const note = document.getElementById('meeting-note').value;
-
-  calendarData[selectedKey] = { type, names, note };
-  localStorage.setItem('downtop-data', JSON.stringify(calendarData));
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function sameDay(a, b) {
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function changeMonth(dir) {
+  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth()+dir, 1);
   render();
-  setSaveStatus('💾 저장 중...');
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = API_URL;
-  form.target = 'hidden-submit-frame';
-
-  const fields = { date: selectedKey, type, names, note };
-  for (const [k, v] of Object.entries(fields)) {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = k;
-    input.value = v;
-    form.appendChild(input);
-  }
-
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
-
-  setTimeout(() => setSaveStatus('✅ 저장 완료'), 500);
-  setTimeout(() => { setSaveStatus(''); fetchData(); }, 2500);
+}
+function goToday()    { currentDate = new Date(); render(); }
+function setSaveStatus(msg) { document.getElementById('save-status').textContent = msg; }
+function closePanel() {
+  document.getElementById('memo-panel-wrap').classList.remove('open');
+  selectedKey = null;
+  render();
 }
 
-function dateKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-function sameDay(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
-function changeMonth(dir) { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth()+dir, 1); render(); }
-function goToday() { currentDate = new Date(); render(); }
-function setSaveStatus(msg) { document.getElementById('save-status').textContent = msg; }
-function closePanel() { document.getElementById('memo-panel-wrap').classList.remove('open'); selectedKey = null; render(); }
-
- // hidden iframe (form submit 결과를 여기서 받아서 페이지 이동 방지)
-const iframe = document.createElement('iframe');
-iframe.name = 'hidden-submit-frame';
-iframe.style.display = 'none';
-document.body.appendChild(iframe);
- 
-// 초기 실행
 fetchData();
 </script>
 </body>
