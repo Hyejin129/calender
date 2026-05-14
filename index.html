@@ -42,15 +42,25 @@
   .tag-half { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
   .tag-meeting { background: #f3f4f6; color: #4b5563; margin-top: 2px; border-left: 3px solid #4f46e5; }
   .memo-panel-wrap { overflow: hidden; max-height: 0; transition: max-height 0.4s ease; }
-  .memo-panel-wrap.open { max-height: 800px; margin-top: 20px; }
+  .memo-panel-wrap.open { max-height: 900px; margin-top: 20px; }
   .memo-panel { background: #fff; border-radius: 16px; border: 1px solid #4f46e5; padding: 24px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.1); }
   .panel-section { display: flex; flex-direction: column; gap: 10px; }
   .section-title { font-size: 14px; font-weight: 700; color: #6b7280; }
-  .attendance-grid { display: flex; gap: 10px; }
-  .att-option { flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center; cursor: pointer; font-size: 14px; transition: all 0.2s; }
-  .att-option.active { border-color: #4f46e5; background: #f5f3ff; color: #4f46e5; font-weight: 700; }
-  .name-input { width: 100%; padding: 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; margin-top: 5px; }
-  .memo-textarea { width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; resize: vertical; }
+
+  /* 출석 블록 — 3개 독립 카드 */
+  .att-blocks { display: flex; flex-direction: column; gap: 12px; }
+  .att-block { border: 1.5px solid #e5e7eb; border-radius: 10px; overflow: hidden; transition: border-color 0.2s; }
+  .att-block.active { border-color: #4f46e5; }
+  .att-block-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; user-select: none; background: #fafafa; transition: background 0.15s; }
+  .att-block.active .att-block-header { background: #f5f3ff; }
+  .att-block-header input[type=checkbox] { width: 17px; height: 17px; accent-color: #4f46e5; cursor: pointer; }
+  .att-block-label { font-size: 15px; font-weight: 600; color: #374151; }
+  .att-block.active .att-block-label { color: #4f46e5; }
+  .att-block-body { display: none; padding: 10px 14px 12px; border-top: 1px solid #e5e7eb; }
+  .att-block.active .att-block-body { display: block; }
+  .att-block-body input { width: 100%; padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: 'Noto Sans KR', sans-serif; }
+
+  .memo-textarea { width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; resize: vertical; font-family: 'Noto Sans KR', sans-serif; }
   .save-status { font-size: 13px; color: #9ca3af; height: 20px; }
   .loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.7); display:flex; justify-content:center; align-items:center; z-index:10; font-weight:bold; color:#4f46e5; }
 </style>
@@ -85,21 +95,52 @@
         <h2 id="panel-date-text">날짜</h2>
         <button class="nav-btn" onclick="closePanel()">✕</button>
       </div>
+
       <div class="panel-section">
-        <div class="section-title">출근/휴무 상태</div>
-        <div class="attendance-grid">
-          <div class="att-option" data-val="work" onclick="setAtt('work')">출근</div>
-          <div class="att-option" data-val="off" onclick="setAtt('off')">연차</div>
-          <div class="att-option" data-val="half" onclick="setAtt('half')">반차</div>
-        </div>
-        <div id="name-input-box" style="display:none">
-          <input type="text" id="att-names" class="name-input" placeholder="대상자 이름을 입력하세요">
+        <div class="section-title">출근 / 휴무 상태 (중복 선택 가능)</div>
+        <div class="att-blocks">
+
+          <!-- 출근 -->
+          <div class="att-block" id="block-work">
+            <div class="att-block-header" onclick="toggleBlock('work')">
+              <input type="checkbox" id="chk-work" onclick="event.stopPropagation(); toggleBlock('work')">
+              <span class="att-block-label">출근</span>
+            </div>
+            <div class="att-block-body">
+              <input type="text" id="names-work" placeholder="출근자 이름 (선택)">
+            </div>
+          </div>
+
+          <!-- 연차 -->
+          <div class="att-block" id="block-off">
+            <div class="att-block-header" onclick="toggleBlock('off')">
+              <input type="checkbox" id="chk-off" onclick="event.stopPropagation(); toggleBlock('off')">
+              <span class="att-block-label">연차</span>
+            </div>
+            <div class="att-block-body">
+              <input type="text" id="names-off" placeholder="연차자 이름">
+            </div>
+          </div>
+
+          <!-- 반차 -->
+          <div class="att-block" id="block-half">
+            <div class="att-block-header" onclick="toggleBlock('half')">
+              <input type="checkbox" id="chk-half" onclick="event.stopPropagation(); toggleBlock('half')">
+              <span class="att-block-label">반차</span>
+            </div>
+            <div class="att-block-body">
+              <input type="text" id="names-half" placeholder="반차자 이름">
+            </div>
+          </div>
+
         </div>
       </div>
+
       <div class="panel-section">
         <div class="section-title">회의 및 주요 일정 메모</div>
         <textarea id="meeting-note" class="memo-textarea" placeholder="회의 내용 입력..."></textarea>
       </div>
+
       <div style="display:flex; justify-content:space-between; align-items:center">
         <div class="save-status" id="save-status"></div>
         <button class="btn btn-primary" onclick="saveData()">💾 데이터 저장하기</button>
@@ -113,7 +154,7 @@ let calendarData = {};
 let currentDate = new Date();
 let selectedKey = null;
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbz0RUI4BceO56RY30BKpIfmnfYYzLMr8ggVMnDhia3TCPZK8zMZ-q0yxhgKx_XdU9uN/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyUZ3dUWh7rk93vckJkw20wVQLMr0mzph7oKh_Qjvj5SuvPo08yOrWdA3dbhAp7B9o/exec';
 
 function getHolidays(year) {
   const h = {
@@ -131,7 +172,40 @@ function getHolidays(year) {
   return h;
 }
 
-// ── GET: JSONP로 데이터 로드 ──────────────────
+// 체크박스 토글
+function toggleBlock(type) {
+  const chk   = document.getElementById('chk-' + type);
+  const block = document.getElementById('block-' + type);
+  chk.checked = !chk.checked;
+  block.classList.toggle('active', chk.checked);
+}
+
+// 패널에 데이터 채우기
+function fillPanel(data) {
+  const types = ['work', 'off', 'half'];
+  types.forEach(t => {
+    const chk   = document.getElementById('chk-' + t);
+    const block = document.getElementById('block-' + t);
+    const input = document.getElementById('names-' + t);
+    const on    = data && data[t] !== undefined && data[t] !== false;
+    chk.checked = on;
+    block.classList.toggle('active', on);
+    input.value = (data && data[t]) ? data[t] : '';
+  });
+  document.getElementById('meeting-note').value = (data && data.note) ? data.note : '';
+}
+
+// 패널에서 데이터 읽기
+function readPanel() {
+  const obj = { note: document.getElementById('meeting-note').value };
+  ['work', 'off', 'half'].forEach(t => {
+    const chk = document.getElementById('chk-' + t);
+    obj[t] = chk.checked ? (document.getElementById('names-' + t).value || true) : false;
+  });
+  return obj;
+}
+
+// ── GET: JSONP 데이터 로드 ──────────────────
 function fetchData() {
   const loading = document.getElementById('loading');
   if (loading) loading.style.display = 'flex';
@@ -171,34 +245,30 @@ function fetchData() {
   document.head.appendChild(script);
 }
 
-// ── SAVE: JSONP GET으로 저장 (action=save) ───
-// Apps Script doGet에서 action=save 파라미터 감지 시 저장 후 JSONP 응답
+// ── SAVE: JSONP GET으로 저장 ─────────────────
 function saveData() {
   if (!selectedKey) return;
-  const active = document.querySelector('.att-option.active');
-  const type  = active ? active.dataset.val : '';
-  const names = document.getElementById('att-names').value;
-  const note  = document.getElementById('meeting-note').value;
+  const d = readPanel();
 
-  // ① 즉시 로컬 반영 + 화면 업데이트
-  calendarData[selectedKey] = { type, names, note };
+  // 즉시 로컬 반영
+  calendarData[selectedKey] = d;
   localStorage.setItem('downtop-data', JSON.stringify(calendarData));
   render();
   setSaveStatus('💾 저장 중...');
 
-  // ② 기존 저장 스크립트 제거
   const old = document.getElementById('jsonp-save-script');
   if (old) old.remove();
 
-  // ③ JSONP GET으로 서버 저장 요청
   const cbName = '__saveCallback';
+  // 각 필드를 문자열로 직렬화해서 전송
   const params = new URLSearchParams({
     callback: cbName,
     action:   'save',
     date:     selectedKey,
-    type:     type,
-    names:    names,
-    note:     note,
+    work:     d.work  === false ? '' : (d.work  === true ? '__checked__' : d.work),
+    off:      d.off   === false ? '' : (d.off   === true ? '__checked__' : d.off),
+    half:     d.half  === false ? '' : (d.half  === true ? '__checked__' : d.half),
+    note:     d.note || '',
     t:        Date.now()
   });
 
@@ -232,31 +302,44 @@ function saveData() {
 }
 
 function render() {
-  const y = currentDate.getFullYear();
+  const y  = currentDate.getFullYear();
   const mo = currentDate.getMonth();
   const holidays = getHolidays(y);
   document.getElementById('cal-title').innerHTML = `${y}년 <span>${mo + 1}월</span>`;
 
   let html = ['일','월','화','수','목','금','토'].map((d,i) =>
     `<div class="day-header ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
-  const first = new Date(y, mo, 1);
-  const last  = new Date(y, mo+1, 0);
+  const first    = new Date(y, mo, 1);
+  const last     = new Date(y, mo+1, 0);
   const startDay = first.getDay();
 
   const addCell = (date, isOther) => {
-    const key = dateKey(date);
+    const key         = dateKey(date);
     const dayData     = calendarData[key] || {};
     const holidayName = holidays[key];
-    const isSun = date.getDay() === 0 || !!holidayName;
-    const isSat = date.getDay() === 6;
+    const isSun       = date.getDay() === 0 || !!holidayName;
+    const isSat       = date.getDay() === 6;
     const isSelected  = key === selectedKey;
     const isToday     = sameDay(date, new Date());
 
     let tagsHtml = '';
-    if (holidayName)            tagsHtml += `<div class="tag tag-holiday">${holidayName}</div>`;
-    if (dayData.type==='work')  tagsHtml += `<div class="tag tag-work">출근</div>`;
-    else if (dayData.type==='off')  tagsHtml += `<div class="tag tag-off">연차: ${dayData.names||''}</div>`;
-    else if (dayData.type==='half') tagsHtml += `<div class="tag tag-half">반차: ${dayData.names||''}</div>`;
+    if (holidayName) tagsHtml += `<div class="tag tag-holiday">${holidayName}</div>`;
+
+    // 출근
+    if (dayData.work && dayData.work !== false) {
+      const label = dayData.work === true || dayData.work === '__checked__' ? '출근' : `출근: ${dayData.work}`;
+      tagsHtml += `<div class="tag tag-work">${label}</div>`;
+    }
+    // 연차
+    if (dayData.off && dayData.off !== false) {
+      const label = dayData.off === true || dayData.off === '__checked__' ? '연차' : `연차: ${dayData.off}`;
+      tagsHtml += `<div class="tag tag-off">${label}</div>`;
+    }
+    // 반차
+    if (dayData.half && dayData.half !== false) {
+      const label = dayData.half === true || dayData.half === '__checked__' ? '반차' : `반차: ${dayData.half}`;
+      tagsHtml += `<div class="tag tag-half">${label}</div>`;
+    }
     if (dayData.note) tagsHtml += `<div class="tag tag-meeting">📝 메모</div>`;
 
     html += `<div class="day-cell ${isOther?'other-month':''} ${isToday?'today':''} ${isSelected?'selected':''}" onclick="selectDay('${key}')">
@@ -265,36 +348,18 @@ function render() {
     </div>`;
   };
 
-  for (let i=0; i<startDay; i++)                       addCell(new Date(y, mo, i-startDay+1), true);
-  for (let d=1; d<=last.getDate(); d++)                 addCell(new Date(y, mo, d), false);
-  for (let d=1; d<=(42-(startDay+last.getDate())); d++) addCell(new Date(y, mo+1, d), true);
+  for (let i=0; i<startDay; i++)                        addCell(new Date(y, mo, i-startDay+1), true);
+  for (let d=1; d<=last.getDate(); d++)                  addCell(new Date(y, mo, d), false);
+  for (let d=1; d<=(42-(startDay+last.getDate())); d++)  addCell(new Date(y, mo+1, d), true);
   document.getElementById('cal-grid').innerHTML = html;
 }
 
 function selectDay(key) {
   selectedKey = key;
-  const data = calendarData[key] || { type:'', names:'', note:'' };
   document.getElementById('panel-date-text').textContent = key;
-  document.getElementById('meeting-note').value  = data.note  || '';
-  document.getElementById('att-names').value     = data.names || '';
-  document.querySelectorAll('.att-option').forEach(opt =>
-    opt.classList.toggle('active', opt.dataset.val === data.type));
-  toggleNameInput(data.type);
+  fillPanel(calendarData[key] || {});
   document.getElementById('memo-panel-wrap').classList.add('open');
   render();
-}
-
-function setAtt(type) {
-  const active  = document.querySelector('.att-option.active');
-  const newType = (active && active.dataset.val === type) ? '' : type;
-  document.querySelectorAll('.att-option').forEach(opt =>
-    opt.classList.toggle('active', opt.dataset.val === newType));
-  toggleNameInput(newType);
-}
-
-function toggleNameInput(type) {
-  document.getElementById('name-input-box').style.display =
-    (type==='off' || type==='half') ? 'block' : 'none';
 }
 
 function dateKey(d) {
@@ -307,9 +372,9 @@ function changeMonth(dir) {
   currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth()+dir, 1);
   render();
 }
-function goToday()    { currentDate = new Date(); render(); }
-function setSaveStatus(msg) { document.getElementById('save-status').textContent = msg; }
-function closePanel() {
+function goToday()         { currentDate = new Date(); render(); }
+function setSaveStatus(msg){ document.getElementById('save-status').textContent = msg; }
+function closePanel()      {
   document.getElementById('memo-panel-wrap').classList.remove('open');
   selectedKey = null;
   render();
