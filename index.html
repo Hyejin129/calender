@@ -151,6 +151,19 @@
     color: #fff !important;
   }
 
+  /* 선택된 날짜 */
+  .day-cell.selected {
+    background: #eef2ff !important;
+    border-color: #c7d2fe !important;
+  }
+  .day-cell.selected .day-num {
+    outline: 2px solid #4f46e5;
+    outline-offset: 2px;
+  }
+  .day-cell.today.selected .day-num {
+    outline: none;
+  }
+
   .holiday-tag {
     font-size: 12px;
     font-weight: 600;
@@ -187,93 +200,157 @@
     color: #15803d;
     background: #dcfce7;
   }
-
-  /* ── MODAL ── */
-  .overlay {
-    position: fixed; inset: 0;
-    background: rgba(15,15,30,.45);
-    backdrop-filter: blur(4px);
-    z-index: 300;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; pointer-events: none;
-    transition: opacity .2s;
+  .day-cell.workday.selected {
+    background: #dcfce7 !important;
   }
-  .overlay.open { opacity: 1; pointer-events: all; }
 
-  .modal {
+  /* ── INLINE MEMO PANEL ── */
+  .memo-panel-wrap {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .memo-panel-wrap.open {
+    max-height: 420px;
+  }
+
+  .memo-panel {
     background: #fff;
-    border-radius: 18px;
-    width: 440px;
-    max-width: 95vw;
-    padding: 28px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.18);
-    transform: translateY(10px) scale(.98);
-    transition: transform .2s;
-  }
-  .overlay.open .modal { transform: translateY(0) scale(1); }
-
-  .modal-header {
+    border-radius: 0 0 16px 16px;
+    border: 1px solid #e8eaed;
+    border-top: none;
+    box-shadow: 0 6px 16px rgba(0,0,0,.07);
+    padding: 24px 28px 22px;
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 6px;
+    flex-direction: column;
+    gap: 14px;
   }
-  .modal-date { font-size: 22px; font-weight: 900; color: #1a1a2e; }
-  .modal-holiday { font-size: 15px; color: #ef4444; font-weight: 600; margin-top: 3px; }
-  .close-btn {
-    width: 30px; height: 30px;
-    background: #f3f4f6; border: none;
+
+  .memo-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .memo-panel-date {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .memo-panel-date-text {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1a1a2e;
+    letter-spacing: -0.3px;
+  }
+
+  .memo-panel-holiday {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ef4444;
+    background: #fef2f2;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  .memo-panel-close {
+    width: 28px; height: 28px;
+    background: #f3f4f6;
+    border: none;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     color: #6b7280;
     display: flex; align-items: center; justify-content: center;
     transition: background .12s;
+    flex-shrink: 0;
   }
-  .close-btn:hover { background: #e5e7eb; color: #374151; }
+  .memo-panel-close:hover { background: #e5e7eb; color: #374151; }
 
-  .divider { height: 1px; background: #f0f0f5; margin: 16px 0; }
-
-  .modal label {
-    display: block;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: .8px;
-    text-transform: uppercase;
-    color: #9ca3af;
-    margin-bottom: 8px;
+  .memo-panel-body {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
   }
-  .note-input {
-    width: 100%;
+
+  .memo-textarea {
+    flex: 1;
     background: #f9fafb;
     border: 1.5px solid #e5e7eb;
     border-radius: 10px;
     padding: 12px 14px;
     color: #1a1a2e;
     font-family: 'Noto Sans KR', sans-serif;
-    font-size: 16px;
-    min-height: 100px;
-    transition: border-color .15s;
-    line-height: 1.6;
-  }
-  .note-input:focus { outline: none; border-color: #4f46e5; background: #fff; }
-  .note-input::placeholder { color: #c4c9d4; }
-
-  .modal-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 16px;
-  }
-  .delete-btn {
-    background: transparent;
-    border: none;
-    color: #ef4444;
     font-size: 15px;
-    opacity: .7;
+    resize: vertical;
+    min-height: 110px;
+    max-height: 240px;
+    line-height: 1.7;
+    transition: border-color .15s, box-shadow .15s;
   }
-  .delete-btn:hover { opacity: 1; }
-  .modal-btns { display: flex; gap: 8px; }
+  .memo-textarea:focus {
+    outline: none;
+    border-color: #4f46e5;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.08);
+  }
+  .memo-textarea::placeholder { color: #c4c9d4; }
+
+  .memo-panel-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .memo-save-btn {
+    padding: 9px 18px;
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+  }
+  .memo-save-btn:hover { background: #4338ca; }
+
+  .memo-delete-btn {
+    padding: 8px 18px;
+    background: transparent;
+    color: #9ca3af;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .memo-delete-btn:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+
+  .memo-hint {
+    font-size: 12px;
+    color: #d1d5db;
+    text-align: center;
+  }
+
+  /* 저장 상태 표시 */
+  .save-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #9ca3af;
+    min-height: 20px;
+    transition: color .2s;
+  }
+  .save-status.saving { color: #f59e0b; }
+  .save-status.saved  { color: #10b981; }
+  .save-status.error  { color: #ef4444; }
 
   /* ── TOAST ── */
   .toast {
@@ -289,6 +366,7 @@
     pointer-events: none;
     transition: all .25s;
     white-space: nowrap;
+    z-index: 200;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -302,6 +380,9 @@
     .day-cell { min-height: 70px; padding: 5px; }
     .day-num { width: 22px; height: 22px; font-size: 11px; }
     .memo-chip { font-size: 10px; }
+    .memo-panel { padding: 16px; }
+    .memo-panel-body { flex-direction: column; }
+    .memo-panel-actions { flex-direction: row; }
   }
 </style>
 </head>
@@ -325,33 +406,37 @@
       <button class="nav-btn" onclick="changeMonth(1)">▶</button>
     </div>
   </div>
+
   <div class="cal-wrap">
     <div class="cal-grid" id="cal-grid"></div>
   </div>
-</main>
 
-<!-- Modal -->
-<div class="overlay" id="overlay" onclick="onOverlayClick(event)">
-  <div class="modal">
-    <div class="modal-header">
-      <div>
-        <div class="modal-date" id="modal-date"></div>
-        <div class="modal-holiday" id="modal-holiday"></div>
+  <!-- 인라인 메모 패널 -->
+  <div class="memo-panel-wrap" id="memo-panel-wrap">
+    <div class="memo-panel">
+      <div class="memo-panel-header">
+        <div class="memo-panel-date">
+          <div class="memo-panel-date-text" id="panel-date-text"></div>
+          <div class="memo-panel-holiday" id="panel-holiday" style="display:none"></div>
+        </div>
+        <button class="memo-panel-close" onclick="closePanel()">✕</button>
       </div>
-      <button class="close-btn" onclick="closeModal()">✕</button>
-    </div>
-    <div class="divider"></div>
-    <label>메모</label>
-    <textarea class="note-input" id="modal-note" placeholder="이 날의 메모를 입력하세요...&#10;(Ctrl+Enter 로 빠르게 저장)"></textarea>
-    <div class="modal-footer">
-      <button class="delete-btn" id="delete-btn" onclick="deleteNote()">🗑 메모 삭제</button>
-      <div class="modal-btns">
-        <button class="btn btn-ghost" onclick="closeModal()">취소</button>
-        <button class="btn btn-primary" onclick="saveNote()">저장</button>
+      <div class="memo-panel-body">
+        <textarea
+          class="memo-textarea"
+          id="panel-note"
+          placeholder="회의 내용을 입력하세요...&#10;&#10;"
+        ></textarea>
+        <div class="memo-panel-actions">
+          <button class="memo-save-btn" onclick="savePanel()">💾 저장</button>
+          <button class="memo-delete-btn" id="panel-delete-btn" onclick="deletePanel()">🗑 삭제</button>
+          <div class="memo-hint">Ctrl+Enter</div>
+        </div>
       </div>
+      <div class="save-status" id="save-status"></div>
     </div>
   </div>
-</div>
+</main>
 
 <div class="toast" id="toast"></div>
 
@@ -417,9 +502,10 @@ function render() {
     const holiday = holidays[key];
     const note    = notes[key] || '';
     const numCls  = (dow===0 || holiday) ? 'sun' : dow===6 ? 'sat' : '';
-    const isWorkday = note.includes('출근');
+    const isWorkday  = note.includes('출근');
+    const isSelected = key === selectedKey;
 
-    html += `<div class="day-cell${other?' other-month':''}${isToday?' today':''}${isWorkday?' workday':''}" onclick="openModal('${key}')">
+    html += `<div class="day-cell${other?' other-month':''}${isToday?' today':''}${isWorkday?' workday':''}${isSelected?' selected':''}" onclick="selectDay('${key}')">
       <div class="day-num ${numCls}">${date.getDate()}</div>
       ${holiday ? `<div class="holiday-tag">${holiday}</div>` : ''}
       ${note    ? `<div class="memo-chip">${escHtml(note)}</div>` : ''}
@@ -434,54 +520,130 @@ function render() {
   document.getElementById('cal-grid').innerHTML = html;
 }
 
-function openModal(key) {
+/* ── 인라인 메모 패널 ── */
+function selectDay(key) {
+  // 같은 날 다시 클릭하면 패널 닫기
+  if (selectedKey === key && document.getElementById('memo-panel-wrap').classList.contains('open')) {
+    closePanel();
+    return;
+  }
+
   selectedKey = key;
-  const [y,mo,d] = key.split('-').map(Number);
-  const date     = new Date(y, mo-1, d);
+  const [y, mo, d] = key.split('-').map(Number);
+  const date = new Date(y, mo - 1, d);
   const holidays = getHolidays(y);
-  const holiday  = holidays[key];
+  const holiday = holidays[key];
   const moNames  = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   const dayNames = ['일','월','화','수','목','금','토'];
 
-  document.getElementById('modal-date').textContent    = `${y}년 ${moNames[mo-1]} ${d}일 (${dayNames[date.getDay()]})`;
-  document.getElementById('modal-holiday').textContent = holiday ? `🎌 ${holiday}` : '';
-  document.getElementById('modal-note').value          = notes[key] || '';
-  document.getElementById('delete-btn').style.visibility = notes[key] ? 'visible' : 'hidden';
+  document.getElementById('panel-date-text').textContent =
+    `${y}년 ${moNames[mo-1]} ${d}일 (${dayNames[date.getDay()]})`;
 
-  document.getElementById('overlay').classList.add('open');
-  setTimeout(() => document.getElementById('modal-note').focus(), 150);
+  const holidayEl = document.getElementById('panel-holiday');
+  if (holiday) {
+    holidayEl.textContent = `🎌 ${holiday}`;
+    holidayEl.style.display = 'block';
+  } else {
+    holidayEl.style.display = 'none';
+  }
+
+  document.getElementById('panel-note').value = notes[key] || '';
+  document.getElementById('panel-delete-btn').style.visibility = notes[key] ? 'visible' : 'hidden';
+  document.getElementById('save-status').textContent = '';
+  document.getElementById('save-status').className = 'save-status';
+
+  // 패널 열기
+  document.getElementById('memo-panel-wrap').classList.add('open');
+
+  // 달력 셀 선택 표시 갱신
+  render();
+
+  // 포커스
+  setTimeout(() => document.getElementById('panel-note').focus(), 300);
+
+  // 패널로 스크롤
+  setTimeout(() => {
+    document.getElementById('memo-panel-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
 }
 
-async function saveNote() {
-  const val = document.getElementById('modal-note').value.trim();
+function closePanel() {
+  selectedKey = null;
+  document.getElementById('memo-panel-wrap').classList.remove('open');
+  render();
+}
+
+function setSaveStatus(type, msg) {
+  const el = document.getElementById('save-status');
+  el.className = 'save-status ' + type;
+  el.textContent = msg;
+}
+
+async function savePanel() {
+  const val = document.getElementById('panel-note').value.trim();
   if (val) notes[selectedKey] = val;
   else     delete notes[selectedKey];
-  save(); render(); closeModal();
-  showToast('💾 저장 중...');
-  await syncToSheet(selectedKey, val);
-  showToast('✅ 저장되었습니다');
+
+  // 삭제 버튼 가시성
+  document.getElementById('panel-delete-btn').style.visibility = val ? 'visible' : 'hidden';
+
+  save();
+  render();
+
+  setSaveStatus('saving', '💾 저장 중...');
+  try {
+    await syncToSheet(selectedKey, val);
+    setSaveStatus('saved', '✅ 저장되었습니다');
+  } catch(e) {
+    setSaveStatus('error', '⚠️ 로컬에만 저장됨');
+  }
+  setTimeout(() => {
+    setSaveStatus('', '');
+  }, 3000);
 }
 
-async function deleteNote() {
+async function deletePanel() {
   if (!confirm('메모를 삭제할까요?')) return;
   delete notes[selectedKey];
-  save(); render(); closeModal();
-  showToast('💾 삭제 중...');
-  await syncToSheet(selectedKey, '');
-  showToast('🗑 메모를 삭제했습니다');
+  document.getElementById('panel-note').value = '';
+  document.getElementById('panel-delete-btn').style.visibility = 'hidden';
+
+  save();
+  render();
+
+  setSaveStatus('saving', '💾 삭제 중...');
+  try {
+    await syncToSheet(selectedKey, '');
+    setSaveStatus('saved', '🗑 삭제되었습니다');
+  } catch(e) {
+    setSaveStatus('error', '⚠️ 로컬에만 반영됨');
+  }
+  setTimeout(() => setSaveStatus('', ''), 3000);
 }
 
-function closeModal()       { document.getElementById('overlay').classList.remove('open'); }
-function onOverlayClick(e)  { if (e.target===document.getElementById('overlay')) closeModal(); }
-
+/* ── 키보드 ── */
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') closeModal();
-  if ((e.ctrlKey||e.metaKey) && e.key==='Enter' && document.getElementById('overlay').classList.contains('open')) saveNote();
+  if (e.key === 'Escape') closePanel();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    if (document.getElementById('memo-panel-wrap').classList.contains('open')) {
+      savePanel();
+    }
+  }
 });
 
-function changeMonth(dir) { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth()+dir, 1); render(); }
-function goToday()        { currentDate = new Date(); render(); }
+function changeMonth(dir) {
+  // 월 변경 시 패널 닫기
+  closePanel();
+  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth()+dir, 1);
+  render();
+}
+function goToday() {
+  closePanel();
+  currentDate = new Date();
+  render();
+}
 
+/* ── Google Sheets 연동 ── */
 const API_URL = 'https://script.google.com/macros/s/AKfycbwhwf6HTEV826uLz274egF1UD2m_1Yezm_3KsqULfmOCxQ7samoSBtw0P1bcM5F0WyU/exec';
 
 function save() {
@@ -489,14 +651,13 @@ function save() {
 }
 
 async function syncToSheet(date, note) {
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, note })
-    });
-  } catch(e) { console.warn('Sheets 동기화 실패:', e); }
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date, note })
+  });
+  return res;
 }
 
 async function load() {
@@ -506,20 +667,14 @@ async function load() {
     showToast('🔄 데이터 불러오는 중...');
     const res = await fetch(API_URL + '?t=' + Date.now());
     const raw = await res.json();
-
-    // Sheets에서 오는 데이터를 확실하게 { "YYYY-MM-DD": "메모" } 형태로 정리
     const parsed = {};
     if (typeof raw === 'object' && !Array.isArray(raw)) {
       Object.entries(raw).forEach(([k, v]) => {
         const key = String(k).trim();
         const val = String(v).trim();
-        // YYYY-MM-DD 형식인 키만 취함
-        if (/^\d{4}-\d{2}-\d{2}$/.test(key) && val) {
-          parsed[key] = val;
-        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(key) && val) parsed[key] = val;
       });
     }
-
     notes = parsed;
     save();
     render();
