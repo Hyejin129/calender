@@ -114,7 +114,7 @@ let currentDate = new Date();
 let selectedKey = null;
 
 // [주의] 여기에 실제 본인의 구글 스크립트 배포 URL을 넣으세요.
-const API_URL = 'https://script.google.com/macros/s/AKfycbypGyMiTVSc9cIelJYNSMPD-ZiLKqNJumw2EDENuKEAb1fM6WcMXDdJ8SIHyGpXFj4/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyEifkfmWCOjHexw4OA1kmFwb7vDhrOgDLfaoldC1d0ZC0s2xkfX1gLfD2-080WJtme/exec';
 
 function getHolidays(year) {
   const h = { [`${year}-01-01`]: '신정', [`${year}-03-01`]: '삼일절', [`${year}-05-05`]: '어린이날', [`${year}-06-06`]: '현충일', [`${year}-08-15`]: '광복절', [`${year}-10-03`]: '개천절', [`${year}-10-09`]: '한글날', [`${year}-12-25`]: '크리스마스' };
@@ -129,22 +129,35 @@ function getHolidays(year) {
 
 async function fetchData() {
   const loading = document.getElementById('loading');
-  loading.style.display = 'flex';
+  if (loading) loading.style.display = 'flex';
+  
+  // 캐시를 방지하기 위해 URL 뒤에 매번 다른 숫자를 붙여 강제 새로고침 유도
+  const nocacheUrl = API_URL + "?t=" + new Date().getTime();
+
   try {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error('Network response was not ok');
+    const response = await fetch(nocacheUrl, {
+      method: 'GET',
+      redirect: 'follow' // 구글 스크립트 접근을 위해 필수 설정
+    });
+
+    if (!response.ok) throw new Error('Network error');
+
     const data = await response.json();
-    calendarData = data;
+    calendarData = data || {};
+    
+    // 로컬 스토리지 업데이트
     localStorage.setItem('downtop-data', JSON.stringify(calendarData));
-    render();
+    render(); // 화면 다시 그리기
   } catch (e) {
     console.error("데이터 로드 실패:", e);
-    // 실패 시 로컬 데이터라도 사용
+    // 실패 시 로컬 스토리지에 저장된 마지막 데이터라도 보여줌
     const local = localStorage.getItem('downtop-data');
-    if(local) calendarData = JSON.parse(local);
-    render();
+    if (local) {
+      calendarData = JSON.parse(local);
+      render();
+    }
   } finally {
-    loading.style.display = 'none';
+    if (loading) loading.style.display = 'none';
   }
 }
 
